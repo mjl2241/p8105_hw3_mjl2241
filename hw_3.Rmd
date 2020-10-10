@@ -1,0 +1,117 @@
+---
+title: "Homework 3"
+author: "Michelle Lee"
+output: github_document
+---
+This is my solution to homework 3.
+```{r import data}
+library(tidyverse)
+library(ggridges)
+library(dplyr)
+library(ggplot2)
+library(p8105.datasets)
+data(instacart)
+names(instacart)
+dim(instacart)
+```
+ [1] "order_id"               "product_id"            
+ [3] "add_to_cart_order"      "reordered"             
+ [5] "user_id"                "eval_set"              
+ [7] "order_number"           "order_dow"             
+ [9] "order_hour_of_day"      "days_since_prior_order"
+[11] "product_name"           "aisle_id"              
+[13] "department_id"          "aisle"                 
+[15] "department"    
+
+[1] 1384617      15
+[1] 1832
+```
+The data, instacart, shows the order details made on instacart. There are 1384617 rows and 15 variables and some of the key variables are, order_id, product_id, add_to_cart_order,reordered, user_id, eval_set, order_number, order_hour_of_day, days_since_prior_order, product_name, department_id, department. Based on the first set of data, we can infer that order id 1 ordered 8 total items, on the 10th hour of the day, 9 days after its previous order, ordered various items with corresponding aisles, which is in the training set of the evaluation. 
+
+- How many aisles are there, and which aisles are the most items ordered from?
+```{r}
+#number of aisles;
+ins_aisle= 
+instacart %>%
+  count(aisle)
+  
+ins_aisle
+#finding the mode;
+ins_aisle[order(ins_aisle$n,decreasing=TRUE),]
+```
+There are 134 aisles and fresh vegetables (n=150609) is the aisle where the most itemswere ordered from.
+
+- Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+```{r}
+ins_aisle2 <- ins_aisle[!(ins_aisle$n<10000),]
+ins_aisle2
+#bar plot
+#sort in increasing order
+ins_aisle2 <- 
+  ins_aisle2[order(ins_aisle2$n,decreasing=FALSE),]
+ins_aisle2
+ggplot(ins_aisle2,aes(x=reorder(aisle,n), y=n))+geom_bar(stat='identity')+coord_flip()
+```
+- Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+```{r}
+#create a subset;
+popular_items <-
+ instacart[which(instacart$aisle == "baking ingredients" |
+                instacart$aisle == "dog food care" |
+                instacart$aisle == "packaged vegetables fruits"),]
+popular_items
+
+#drop other columns;
+popular_items=
+  select(popular_items, aisle, product_name)
+popular_items
+
+#find frequency of each items;
+popular_items =
+popular_items %>%
+  count(aisle,product_name)
+popular_items
+
+#sort in decreasing order;
+popular_items= 
+  popular_items[order(popular_items$n,decreasing=TRUE),]
+popular_items
+
+#create a table;
+require(data.table)
+popular_items_top3 = 
+data.table(popular_items, key = "aisle")
+popular_items_top3
+popular_items_top3=
+popular_items_top3[,head(.SD,3), by=aisle]
+popular_items_top3
+```
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+```{r pla_cic}
+pla_cic <-
+ instacart[which(instacart$product_name == "Pink Lady Apples" |
+                instacart$product_name == "Coffee Ice Cream"),]
+pla_cic
+
+#drop other columns;
+pla_cic =
+select(pla_cic , order_hour_of_day, order_dow, product_name)
+pla_cic
+
+#group by each dow;
+require(data.table)
+by_dow <- 
+pla_cic %>%
+group_by (order_dow, product_name)
+by_dow
+by_dow %>% summarise(
+  mean_hours = mean(order_hour_of_day)
+  )
+```
+
+#problem 3
+```{r}
+library(p8105.datasets)
+data("ny_noaa")
+```

@@ -6,14 +6,14 @@ This is my solution to homework 3.
 
     library(tidyverse)
 
-    ## ── Attaching packages ───────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
     ## ✓ ggplot2 3.3.2     ✓ purrr   0.3.4
     ## ✓ tibble  3.0.3     ✓ dplyr   1.0.2
     ## ✓ tidyr   1.1.2     ✓ stringr 1.4.0
     ## ✓ readr   1.3.1     ✓ forcats 0.4.0
 
-    ## ── Conflicts ──────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ───────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -255,7 +255,11 @@ table for human readers (i.e. produce a 2 x 7 table).
 |          6 | Coffee Ice Cream |          14 |
 |          6 | Pink Lady Apples |          12 |
 
-\#problem 2
+\#problem 2 Load, tidy, and otherwise wrangle the data. Your final
+dataset should include all originally observed variables and values;
+have useful variable names; include a weekday vs weekend variable; and
+encode data with reasonable variable classes. Describe the resulting
+dataset (e.g. what variables exist, how many observations, etc).
 
     #import csv
     acc_data = read_csv("./accel_data.csv")
@@ -269,11 +273,9 @@ table for human readers (i.e. produce a 2 x 7 table).
     ## See spec(...) for full column specifications.
 
     acc_data_clean = janitor::clean_names(acc_data)
-    acc_data_clean %>%
-      group_by(week,day)
+    acc_data_clean
 
     ## # A tibble: 35 x 1,443
-    ## # Groups:   week, day [35]
     ##     week day_id day   activity_1 activity_2 activity_3 activity_4 activity_5
     ##    <dbl>  <dbl> <chr>      <dbl>      <dbl>      <dbl>      <dbl>      <dbl>
     ##  1     1      1 Frid…       88.4       82.2       64.4       70.0       75.0
@@ -314,6 +316,119 @@ table for human readers (i.e. produce a 2 x 7 table).
     ## #   activity_102 <dbl>, activity_103 <dbl>, activity_104 <dbl>,
     ## #   activity_105 <dbl>, …
 
+    acc_data_clean =
+      pivot_longer(
+        acc_data_clean,
+        activity_1:activity_1440,
+        names_to = "minute",
+        values_to= "activity_counts")
+
+    acc_data_clean =
+      acc_data_clean %>%
+      mutate(weekday_weekend = day) %>%
+      mutate(weekday_weekend = recode(weekday_weekend, 
+                                      'Monday' = 'weekday',
+                                      'Tuesday' = 'weekday',
+                                      'Wednesday' = 'weekday',
+                                      'Thursday' = 'weekday',
+                                      'Friday' = 'weekday',
+                                      'Saturday' = 'weekdend',
+                                      'Sunday' = 'weekend'
+                                      )) 
+    acc_data_clean$day <-
+      factor(acc_data_clean$day, levels= c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+
+    acc_data_clean[order(acc_data_clean$day), ]
+
+    ## # A tibble: 50,400 x 6
+    ##     week day_id day    minute      activity_counts weekday_weekend
+    ##    <dbl>  <dbl> <fct>  <chr>                 <dbl> <chr>          
+    ##  1     1      2 Monday activity_1                1 weekday        
+    ##  2     1      2 Monday activity_2                1 weekday        
+    ##  3     1      2 Monday activity_3                1 weekday        
+    ##  4     1      2 Monday activity_4                1 weekday        
+    ##  5     1      2 Monday activity_5                1 weekday        
+    ##  6     1      2 Monday activity_6                1 weekday        
+    ##  7     1      2 Monday activity_7                1 weekday        
+    ##  8     1      2 Monday activity_8                1 weekday        
+    ##  9     1      2 Monday activity_9                1 weekday        
+    ## 10     1      2 Monday activity_10               1 weekday        
+    ## # … with 50,390 more rows
+
+    view(acc_data_clean)
+    summary(acc_data_clean)
+
+    ##       week       day_id          day          minute          activity_counts
+    ##  Min.   :1   Min.   : 1   Monday   :7200   Length:50400       Min.   :   1   
+    ##  1st Qu.:2   1st Qu.: 9   Tuesday  :7200   Class :character   1st Qu.:   1   
+    ##  Median :3   Median :18   Wednesday:7200   Mode  :character   Median :  74   
+    ##  Mean   :3   Mean   :18   Thursday :7200                      Mean   : 267   
+    ##  3rd Qu.:4   3rd Qu.:27   Friday   :7200                      3rd Qu.: 364   
+    ##  Max.   :5   Max.   :35   Saturday :7200                      Max.   :8982   
+    ##                           Sunday   :7200                                     
+    ##  weekday_weekend   
+    ##  Length:50400      
+    ##  Class :character  
+    ##  Mode  :character  
+    ##                    
+    ##                    
+    ##                    
+    ## 
+
+Data description: This dataset contains information regarding five weeks
+of accelerometer data collected on a 63 year-old male with BMI 25.
+(After pivoting,) The dataset contains a total of 50400 observations and
+6 variables, including new variables, activity\_counts, minute, and
+weekday vs weekend. There is no missing data. “activity\_counts” is the
+activity count for a given mintue in the observation.
+
+Traditional analyses of accelerometer data focus on the total activity
+over the day. Using your tidied dataset, aggregate accross minutes to
+create a total activity variable for each day, and create a table
+showing these totals. Are any trends apparent?
+
+    total_activity =
+    acc_data_clean %>%
+        group_by(week,day) %>%
+        summarise(
+          total_activity = sum(activity_counts)
+        ) %>%
+      pivot_wider(
+        names_from = "day",
+        values_from = "total_activity"
+      ) 
+
+    ## `summarise()` regrouping output by 'week' (override with `.groups` argument)
+
+    knitr::kable(total_activity)
+
+| week |    Monday |  Tuesday | Wednesday | Thursday |   Friday | Saturday | Sunday |
+|-----:|----------:|---------:|----------:|---------:|---------:|---------:|-------:|
+|    1 |  78828.07 | 307094.2 |    340115 | 355923.6 | 480542.6 |   376254 | 631105 |
+|    2 | 295431.00 | 423245.0 |    440962 | 474048.0 | 568839.0 |   607175 | 422018 |
+|    3 | 685910.00 | 381507.0 |    468869 | 371230.0 | 467420.0 |   382928 | 467052 |
+|    4 | 409450.00 | 319568.0 |    434460 | 340291.0 | 154049.0 |     1440 | 260617 |
+|    5 | 389080.00 | 367824.0 |    445366 | 549658.0 | 620860.0 |     1440 | 138421 |
+
+Based on the table above, it is difficult to identify any clear trends
+betwen total activity variable for each day.Generally, this person had a
+consistent total activity between 340115\~ 468869 on Wednesdays. On
+Saturday of week 4 and 5, this person had low activity counts compared
+to other days.
+
+Accelerometer data allows the inspection activity over the course of the
+day. Make a single-panel plot that shows the 24-hour activity time
+courses for each day and use color to indicate day of the week. Describe
+in words any patterns or conclusions you can make based on this graph.
+
+    acc_data_clean %>%
+        ggplot(aes(x = minute, y = activity_counts,group=day)) + 
+      geom_line(aes(color = day)) +
+      labs(title = "24 hour activity time courses over 5 weeks", 
+           x = "Hours", 
+           y = "Activity Counts") 
+
+![](hw_3_files/figure-gfm/making%20a%20single%20panel%20plot-1.png)<!-- -->
 \#problem 3
 
     library(p8105.datasets)
@@ -623,7 +738,7 @@ than 100 separately by year.
       theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
     tmax_tmin
 
-![](hw_3_files/figure-gfm/unnamed-chunk-5-1.png)<!-- --> Based on
+![](hw_3_files/figure-gfm/unnamed-chunk-6-1.png)<!-- --> Based on
 1,458,900 observations of tmax and tmin, excluding NAs.
 
     snow_year = 
@@ -636,4 +751,4 @@ than 100 separately by year.
       theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
     snow_year
 
-![](hw_3_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](hw_3_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->

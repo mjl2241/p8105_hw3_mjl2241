@@ -103,16 +103,66 @@ by_dow =
 knitr::kable(by_dow)
 ```
 #problem 2
+Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
 ```{r import data for acc}
 #import csv
 acc_data = read_csv("./accel_data.csv")
 acc_data_clean = janitor::clean_names(acc_data)
-acc_data_clean %>%
-  group_by(week,day)
+acc_data_clean
+acc_data_clean =
+  pivot_longer(
+    acc_data_clean,
+    activity_1:activity_1440,
+    names_to = "minute",
+    values_to= "activity_counts")
 
+acc_data_clean =
+  acc_data_clean %>%
+  mutate(weekday_weekend = day) %>%
+  mutate(weekday_weekend = recode(weekday_weekend, 
+                                  'Monday' = 'weekday',
+                                  'Tuesday' = 'weekday',
+                                  'Wednesday' = 'weekday',
+                                  'Thursday' = 'weekday',
+                                  'Friday' = 'weekday',
+                                  'Saturday' = 'weekdend',
+                                  'Sunday' = 'weekend'
+                                  )) 
+acc_data_clean$day <-
+  factor(acc_data_clean$day, levels= c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+
+acc_data_clean[order(acc_data_clean$day), ]
+view(acc_data_clean)
+summary(acc_data_clean)
 ```
+Data description: 
+This dataset contains information regarding five weeks of accelerometer data collected on a 63 year-old male with BMI 25. (After pivoting,) The dataset contains a total of 50400 observations and 6 variables, including new variables, activity_counts, minute, and weekday vs weekend. There is no missing data. “activity_counts” is the activity count for a given mintue in the observation.
 
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+```{r}
+total_activity =
+acc_data_clean %>%
+    group_by(week,day) %>%
+    summarise(
+      total_activity = sum(activity_counts)
+    ) %>%
+  pivot_wider(
+    names_from = "day",
+    values_from = "total_activity"
+  ) 
+knitr::kable(total_activity)
+```
+Based on the table above, it is difficult to identify any clear trends betwen total activity variable for each day.Generally, this person had a consistent total activity between 340115~ 468869 on Wednesdays. On Saturday of week 4 and 5, this person had low activity counts compared to other days.
 
+Accelerometer data allows the inspection activity over the course of the day. Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
+```{r making a single panel plot}
+acc_data_clean %>%
+    ggplot(aes(x = minute, y = activity_counts,group=day)) + 
+  geom_line(aes(color = day)) +
+  labs(title = "24 hour activity time courses over 5 weeks", 
+       x = "Hours", 
+       y = "Activity Counts") 
+```
 #problem 3
 ```{r import data and write a short description}
 library(p8105.datasets)

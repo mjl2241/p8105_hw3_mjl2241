@@ -10,22 +10,13 @@ library(ggridges)
 library(dplyr)
 library(ggplot2)
 library(p8105.datasets)
-data(instacart)
+data("instacart")
 names(instacart)
-dim(instacart)
+summary(unique(instacart$department))
+summary(unique(instacart$aisle))
 ```
- [1] "order_id"               "product_id"            
- [3] "add_to_cart_order"      "reordered"             
- [5] "user_id"                "eval_set"              
- [7] "order_number"           "order_dow"             
- [9] "order_hour_of_day"      "days_since_prior_order"
-[11] "product_name"           "aisle_id"              
-[13] "department_id"          "aisle"                 
-[15] "department"    
 
-[1] 1384617      15
-[1] 1832
-```
+
 The data, instacart, shows the order details made on instacart. There are 1384617 rows and 15 variables and some of the key variables are, order_id, product_id, add_to_cart_order,reordered, user_id, eval_set, order_number, order_hour_of_day, days_since_prior_order, product_name, department_id, department. Based on the first set of data, we can infer that order id 1 ordered 8 total items, on the 10th hour of the day, 9 days after its previous order, ordered various items with corresponding aisles, which is in the training set of the evaluation. 
 
 - How many aisles are there, and which aisles are the most items ordered from?
@@ -43,14 +34,22 @@ There are 134 aisles and fresh vegetables (n=150609) is the aisle where the most
 
 - Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 ```{r}
-ins_aisle2 <- ins_aisle[!(ins_aisle$n<10000),]
-ins_aisle2
-#bar plot
-#sort in increasing order
-ins_aisle2 <- 
-  ins_aisle2[order(ins_aisle2$n,decreasing=FALSE),]
-ins_aisle2
-ggplot(ins_aisle2,aes(x=reorder(aisle,n), y=n))+geom_bar(stat='identity')+coord_flip()
+ins_aisle2 =
+  instacart %>% 
+  group_by (aisle, department) %>% 
+  summarize(number_products = n()) %>%
+  arrange(department)
+
+  ins_aisle2$aisle =
+    factor(ins_aisle2$aisle, levels = unique(ins_aisle2 $aisle))
+  
+  ins_aisle2  %>% 
+  ggplot(aes(x = aisle, y = number_products)) + 
+  geom_point(aes(color = department)) +
+  labs(title = "Products ordered per aisle within departments",
+       y = "Products ordered", x = "Aisles") +
+  scale_x_discrete(breaks = NULL) +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 - Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 ```{r}
@@ -59,32 +58,25 @@ popular_items <-
  instacart[which(instacart$aisle == "baking ingredients" |
                 instacart$aisle == "dog food care" |
                 instacart$aisle == "packaged vegetables fruits"),]
-popular_items
 
-#drop other columns;
+#drop other columns and find frequency of each product;
 popular_items=
-  select(popular_items, aisle, product_name)
-popular_items
-
-#find frequency of each items;
-popular_items =
-popular_items %>%
-  count(aisle,product_name)
-popular_items
+  select(popular_items, aisle, product_name) %>%
+  count(aisle,product_name) 
 
 #sort in decreasing order;
 popular_items= 
   popular_items[order(popular_items$n,decreasing=TRUE),]
-popular_items
 
 #create a table;
 require(data.table)
-popular_items_top3 = 
-data.table(popular_items, key = "aisle")
-popular_items_top3
+popular_items_top3 =
+  data.table(popular_items, key = "aisle")
+
 popular_items_top3=
-popular_items_top3[,head(.SD,3), by=aisle]
-popular_items_top3
+  popular_items_top3[,head(.SD,3), by=aisle]
+knitr::kable(popular_items_top3)
+
 ```
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
@@ -101,14 +93,25 @@ pla_cic
 
 #group by each dow;
 require(data.table)
-by_dow <- 
-pla_cic %>%
-group_by (order_dow, product_name)
-by_dow
-by_dow %>% summarise(
-  mean_hours = mean(order_hour_of_day)
+by_dow = 
+  pla_cic %>%
+  group_by (order_dow, product_name)
+by_dow =
+  by_dow %>% summarise(
+  mean_hours = round(mean(order_hour_of_day))
   )
+knitr::kable(by_dow)
 ```
+#problem 2
+```{r import data for acc}
+#import csv
+acc_data = read_csv("./accel_data.csv")
+acc_data_clean = janitor::clean_names(acc_data)
+acc_data_clean %>%
+  group_by(week,day)
+
+```
+
 
 #problem 3
 ```{r import data and write a short description}
@@ -141,28 +144,24 @@ ny_noaa_clean =
   mutate( prcp = prcp/10, tmax = tmax/10, tmin = tmin/10)
 ```
 For snowfall, what are the most commonly observed values? Why?
-```{snowfall}
+```{r snowfall}
 ny_noaa_snow_clean = 
   na.omit(ny_noaa_clean, cols ='snow')
 #find frequency of each values in snow;
 mode_snow =
-ny_noaa_snow_clean %>%
+  ny_noaa_snow_clean %>%
   count(snow)
-mode_snow
 
 #sort in decreasing order;
 mode_snow= 
   mode_snow[order(mode_snow$n,decreasing=TRUE),]
-mode_snow
 ```
 The most commonly observed values are 0 (1112758), 25(15809), and 13 (12460) in the snow variable. The high observed value of 0 could be explained by the fact that many parts of NY do not snow during much of the year, except during the winter.  
 Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
 ```{r}
-view(ny_noaa_clean)
 jan_july = 
   ny_noaa_clean[which(ny_noaa_clean$month == "01" |
                 ny_noaa_clean$month == "07"),]
-                
 jan_july
 
 #drop other columns and change variables to int;
@@ -177,7 +176,6 @@ jan_july=
     facet_grid(.~month) +
     labs( title = "Temperature in January and July by year", y = "Average Maximum Temperature", x = "Time (year)") +
     theme(legend.position = "none", panel.spacing = unit(2, "lines"), plot.title = element_text(hjust = 0.5))
-jan_july
 ```
 There is a general trend for the average maximum temperature in January and July in each station across years.For January of each year, there has been a cyclical fluctuation in maximum temperature over the years. Based on the graph, we can infer that there seems to be a peak in mean max temp every 10 years, and there are a few outliers for the trend in January. For July, the average max temperature has remained between 25-30º C,  but there is a notable low average maximum temperature in July that occured between 1985 and 1990.
 

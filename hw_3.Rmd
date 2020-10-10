@@ -111,7 +111,99 @@ by_dow %>% summarise(
 ```
 
 #problem 3
-```{r}
+```{r import data and write a short description}
 library(p8105.datasets)
 data("ny_noaa")
+ny_noaa= 
+  ny_noaa[order(ny_noaa$date,decreasing=FALSE),]
+ny_noaa[order(ny_noaa$date,decreasing=TRUE),]
+ny_noaa
+unique(ny_noaa$id)
+summary(is.na(ny_noaa))
+```
+Description of the dataset:
+There is a total of 2,595,176 total observations(rows) and 7 variables (columns), which includes ID, date, prcp, snow, snwd, tmax, and tmin. The important variables are date, prcp, snow, tmax, and tmin, as these datapoints indicate the weather on a certain day. The date ranges from 1981-01-01 to 2010-12-31, but not all days between that period are recorded. There are 746 unique IDs/ locations. Variables prcp (145838), snow (381221), snwd (591786), tmax(1134358), and tmin(1134420) are missing values.
+
+Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. 
+``` {r data cleaning}
+ny_noaa_clean =
+  ny_noaa %>%
+  mutate(
+    month = lubridate::floor_date(date, unit = "month"),
+    year = lubridate::floor_date(date, unit = "year"),
+    day = lubridate::floor_date(date, unit = "day")
+  ) %>% 
+  separate(year, into = c("year", "trash1", "trash2"), sep = "-") %>%
+  separate(month, into = c("trash3", "month", "trash4"), sep = "-") %>% 
+  separate(day, into = c("trash5", "trash6", "day"), sep = "-") %>% 
+  select(-contains("trash")) %>% 
+  mutate(tmax = as.numeric(tmax), tmin = as.numeric(tmin)) %>% 
+  mutate( prcp = prcp/10, tmax = tmax/10, tmin = tmin/10)
+```
+For snowfall, what are the most commonly observed values? Why?
+```{snowfall}
+ny_noaa_snow_clean = 
+  na.omit(ny_noaa_clean, cols ='snow')
+#find frequency of each values in snow;
+mode_snow =
+ny_noaa_snow_clean %>%
+  count(snow)
+mode_snow
+
+#sort in decreasing order;
+mode_snow= 
+  mode_snow[order(mode_snow$n,decreasing=TRUE),]
+mode_snow
+```
+The most commonly observed values are 0 (1112758), 25(15809), and 13 (12460) in the snow variable. The high observed value of 0 could be explained by the fact that many parts of NY do not snow during much of the year, except during the winter.  
+Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
+```{r}
+view(ny_noaa_clean)
+jan_july = 
+  ny_noaa_clean[which(ny_noaa_clean$month == "01" |
+                ny_noaa_clean$month == "07"),]
+                
+jan_july
+
+#drop other columns and change variables to int;
+jan_july=
+  jan_july %>%
+    select(id, year, month, tmax) %>%
+    mutate(year = as.numeric(year)) %>%
+    summarize(avg_tmax = mean(tmax, na.rm = TRUE)) %>% 
+    ggplot(aes(x = year, y = avg_tmax)) +
+    geom_point(aes(color = id)) +
+    geom_smooth()+
+    facet_grid(.~month) +
+    labs( title = "Temperature in January and July by year", y = "Average Maximum Temperature", x = "Time (year)") +
+    theme(legend.position = "none", panel.spacing = unit(2, "lines"), plot.title = element_text(hjust = 0.5))
+jan_july
+```
+There is a general trend for the average maximum temperature in January and July in each station across years.For January of each year, there has been a cyclical fluctuation in maximum temperature over the years. Based on the graph, we can infer that there seems to be a peak in mean max temp every 10 years, and there are a few outliers for the trend in January. For July, the average max temperature has remained between 25-30º C,  but there is a notable low average maximum temperature in July that occured between 1985 and 1990.
+
+Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+```{r }
+tmax_tmin=
+  ny_noaa_clean %>%
+    select(tmax,tmin) %>%
+    na.omit(ny_noaa_clean, cols ='tmax','tmin') %>%
+    ggplot(aes(x = tmax, y = tmin)) + 
+  geom_hex() +  
+  labs(title = "tmax vs. tmin", x = "tmin (ºC)", y = "tmax (ºC)") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
+tmax_tmin
+```
+Based on 1,458,900 observations of tmax and tmin, excluding NAs. 
+
+```{r}
+snow_year = 
+  ny_noaa_clean %>% 
+  filter(0 < snow & snow < 100) %>%
+  ggplot(aes( x = year, y = snow)) +
+  geom_hex() + 
+  scale_x_discrete(breaks = c("1981","1990","2000","2010")) +
+  labs(title = "Snowfall by year", y = "snow fall (mm)")+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
+snow_year
+
 ```

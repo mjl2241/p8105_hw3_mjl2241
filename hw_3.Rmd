@@ -1,8 +1,13 @@
 ---
 title: "Homework 3"
 author: "Michelle Lee"
-output: github_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cerulean
 ---
+
 This is my solution to homework 3.
 ```{r import data}
 library(tidyverse)
@@ -192,6 +197,7 @@ ny_noaa_clean =
   select(-contains("trash")) %>% 
   mutate(tmax = as.numeric(tmax), tmin = as.numeric(tmin)) %>% 
   mutate( prcp = prcp/10, tmax = tmax/10, tmin = tmin/10)
+ny_noaa_clean
 ```
 For snowfall, what are the most commonly observed values? Why?
 ```{r snowfall}
